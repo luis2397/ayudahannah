@@ -10,10 +10,26 @@
     },
     {
       "id": 2,
-      "title": "Cotización del tratamiento",
-      "description": "Presupuesto detallado del tratamiento requerido.",
+      "title": "Factura médica 1",
+      "description": "Factura oficial del tratamiento veterinario de Hannah.",
       "type": "pdf",
-      "url": "#",
+      "url": "./data/factura%201%20hannah.pdf",
+      "thumbnail": null
+    },
+    {
+      "id": 3,
+      "title": "Factura médica 2",
+      "description": "Factura oficial del tratamiento veterinario de Hannah.",
+      "type": "pdf",
+      "url": "./data/factura%202%20hannah.pdf",
+      "thumbnail": null
+    },
+    {
+      "id": 4,
+      "title": "Factura médica 3",
+      "description": "Factura oficial del tratamiento veterinario de Hannah.",
+      "type": "pdf",
+      "url": "./data/factura%203%20hannah.pdf",
       "thumbnail": null
     }
   ]
