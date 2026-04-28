@@ -3,11 +3,21 @@
     {
       "transaction_id": "DON-1745840000000-abc001",
       "date": "2026-04-28T14:00:00.000Z",
-      "amount": 50000,
+      "amount": 1000,
       "currency": "COP",
       "status": "approved",
-      "method": "nequi",
-      "donor_name": "Lina Maria Leiton",
+      "method": "Daviplata",
+      "donor_name": "fhgf",
+      "donor_phone": "3124568568"
+    },
+    {
+      "transaction_id": "DON-1745840000000-abc002",
+      "date": "2026-04-28T14:00:00.000Z",
+      "amount": 10000,
+      "currency": "COP",
+      "status": "approved",
+      "method": "Nequi",
+      "donor_name": "Lina Marcela Leiton",
       "donor_phone": "3153264960"
     }
 
