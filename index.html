@@ -13,14 +13,21 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
   <link rel="stylesheet" href="./css/styles.css">
 
-  <!-- Token de GitHub con permiso "Contents: Read and Write" en este repositorio.
-       Crea un Fine-grained PAT en https://github.com/settings/tokens?type=beta
-       con scope: Contents (Read and Write) solo para este repo. -->
+  <!-- Configuración Google Forms para registrar donaciones.
+       Pasos:
+       1. Crea un formulario en https://forms.google.com con los campos:
+          Nombre, Teléfono, Método de pago, Monto (COP)
+       2. Abre el formulario en modo vista previa, inspecciona los inputs y copia
+          los atributos "name" de cada campo (tienen el formato entry.XXXXXXXXXX).
+       3. En la URL del formulario copia el ID (la parte entre /d/e/ y /viewform).
+       4. Reemplaza los valores REEMPLAZA_* de abajo con los datos reales.
+  -->
   <script>
-    window.GITHUB_DONATIONS_TOKEN = 'ghp_REEMPLAZA_CON_TU_TOKEN';
-    window.GITHUB_OWNER  = 'luis2397';
-    window.GITHUB_REPO   = 'ayudahannah';
-    window.GITHUB_BRANCH = 'main';
+    window.GOOGLE_FORM_ID     = 'REEMPLAZA_CON_ID_DEL_FORMULARIO'; // ID del Google Form
+    window.GF_ENTRY_NAME      = 'entry.REEMPLAZA_NOMBRE';   // Campo: Nombre
+    window.GF_ENTRY_PHONE     = 'entry.REEMPLAZA_TELEFONO'; // Campo: Teléfono
+    window.GF_ENTRY_METHOD    = 'entry.REEMPLAZA_METODO';   // Campo: Método de pago
+    window.GF_ENTRY_AMOUNT    = 'entry.REEMPLAZA_MONTO';    // Campo: Monto (COP)
   </script>
 </head>
 <body>

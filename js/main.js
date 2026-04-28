@@ -126,60 +126,7 @@ async function loadEvidences() {
   }
 }
 
-/* ── GitHub API helpers (serverless mode) ── */
-
-function _ghBase64Encode(str) {
-  // btoa doesn't handle multi-byte UTF-8 (e.g. accented names); this does.
-  return btoa(unescape(encodeURIComponent(str)));
-}
-
-function _ghBase64Decode(b64) {
-  return decodeURIComponent(escape(atob(b64)));
-}
-
-async function ghRead(filePath) {
-  const owner  = window.GITHUB_OWNER  || 'luis2397';
-  const repo   = window.GITHUB_REPO   || 'ayudahannah';
-  const branch = window.GITHUB_BRANCH || 'main';
-  const token  = window.GITHUB_DONATIONS_TOKEN;
-  const headers = { 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
-  if (token) headers['Authorization'] = `token ${token}`;
-  const res = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`,
-    { headers }
-  );
-  if (!res.ok) throw new Error(`GitHub read error (${res.status})`);
-  const data = await res.json();
-  return { content: JSON.parse(_ghBase64Decode(data.content.replace(/\s/g, ''))), sha: data.sha };
-}
-
-async function ghWrite(filePath, content, sha, message) {
-  const owner  = window.GITHUB_OWNER  || 'luis2397';
-  const repo   = window.GITHUB_REPO   || 'ayudahannah';
-  const branch = window.GITHUB_BRANCH || 'main';
-  const token  = window.GITHUB_DONATIONS_TOKEN;
-  if (!token) throw new Error('GITHUB_DONATIONS_TOKEN no configurado');
-  const encoded = _ghBase64Encode(JSON.stringify(content, null, 2) + '\n');
-  const res = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
-    {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      body: JSON.stringify({ message, content: encoded, sha, branch }),
-    }
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`GitHub write error (${res.status}): ${err.message || ''}`);
-  }
-}
-
-/* ── Donation form submission ── */
+/* ── Donation form submission (Google Forms) ── */
 async function submitDonationForm(event) {
   event.preventDefault();
 
@@ -199,39 +146,32 @@ async function submitDonationForm(event) {
     showFormMsg('error', 'El monto mínimo de donación es $1.000 COP.'); return;
   }
 
+  const formId = window.GOOGLE_FORM_ID;
+  if (!formId || formId.includes('REEMPLAZA')) {
+    showFormMsg('error', '❌ Formulario no configurado. Contáctanos por WhatsApp para reportar tu donación.');
+    return;
+  }
+
   submitBtn.disabled = true;
   submitBtn.textContent = 'Enviando…';
 
   try {
-    const donation = {
-      transaction_id: `DON-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      date:       new Date().toISOString(),
-      amount:     amountVal,
-      currency:   'COP',
-      status:     'pending',
-      method:     methodVal,
-      donor_name:  nameVal.slice(0, 80),
-      donor_phone: phoneVal.replace(/[\s\-]/g, '').slice(0, 15),
-    };
+    const body = new URLSearchParams();
+    body.set(window.GF_ENTRY_NAME,   nameVal.slice(0, 80));
+    body.set(window.GF_ENTRY_PHONE,  phoneVal.replace(/[\s\-]/g, '').slice(0, 15));
+    body.set(window.GF_ENTRY_METHOD, methodVal);
+    body.set(window.GF_ENTRY_AMOUNT, String(amountVal));
 
-    const { content: donationsData, sha } = await ghRead('data/donations.json');
-    const donations = donationsData.donations || [];
-    // Idempotency: avoid duplicates on double-click
-    if (!donations.some(d => d.transaction_id === donation.transaction_id)) {
-      donations.push(donation);
-      donationsData.donations = donations;
-      await ghWrite(
-        'data/donations.json',
-        donationsData,
-        sha,
-        `chore: register donation ${donation.transaction_id.slice(-8)}`
-      );
-    }
+    // Google Forms doesn't allow CORS reads; mode 'no-cors' submits without reading the response.
+    await fetch(
+      `https://docs.google.com/forms/d/e/${formId}/formResponse`,
+      { method: 'POST', mode: 'no-cors', body }
+    );
 
     showFormMsg('success', '✅ ¡Gracias! Tu donación quedó registrada. La confirmaremos pronto. 🐾');
     event.target.reset();
   } catch (err) {
-    showFormMsg('error', '❌ Error al registrar. Intenta de nuevo o contáctanos por WhatsApp.');
+    showFormMsg('error', '❌ Error al enviar. Intenta de nuevo o contáctanos por WhatsApp.');
     console.error('Donation submit error:', err.message);
   } finally {
     submitBtn.disabled = false;
