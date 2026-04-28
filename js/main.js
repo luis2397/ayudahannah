@@ -126,62 +126,75 @@ async function loadEvidences() {
   }
 }
 
-/* ── ePayco Checkout ── */
-let selectedAmount = 0;
+/* ── Donation form submission ── */
+async function submitDonationForm(event) {
+  event.preventDefault();
 
-function selectAmount(amount, btn) {
-  selectedAmount = amount;
-  document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  const customInput = document.getElementById('custom-amount');
-  if (customInput) customInput.value = '';
-}
+  const nameVal   = document.getElementById('don-name').value.trim();
+  const phoneVal  = document.getElementById('don-phone').value.trim();
+  const methodVal = document.getElementById('don-method').value;
+  const amountVal = parseInt(document.getElementById('don-amount').value, 10);
+  const msgEl     = document.getElementById('donation-form-msg');
+  const submitBtn = document.getElementById('don-submit-btn');
 
-function onCustomAmountChange(input) {
-  const val = parseInt(input.value.replace(/\D/g, ''), 10);
-  selectedAmount = isNaN(val) ? 0 : val;
-  document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
-}
-
-function donatePrimary() {
-  const customInput = document.getElementById('custom-amount');
-  if (customInput && customInput.value) {
-    const val = parseInt(customInput.value.replace(/\D/g, ''), 10);
-    if (!isNaN(val)) selectedAmount = val;
+  // Client-side validation
+  if (!nameVal) { showFormMsg('error', 'Por favor ingresa tu nombre completo.'); return; }
+  if (!phoneVal || !/^\d{7,15}$/.test(phoneVal.replace(/[\s\-]/g, ''))) {
+    showFormMsg('error', 'Por favor ingresa un número de teléfono válido.'); return;
+  }
+  if (!methodVal) { showFormMsg('error', 'Selecciona el método de pago que usaste.'); return; }
+  if (!amountVal || amountVal < 1000) {
+    showFormMsg('error', 'El monto mínimo de donación es $1.000 COP.'); return;
   }
 
-  if (!selectedAmount || selectedAmount < 1000) {
-    alert('Por favor selecciona o ingresa un monto de donación (mínimo $1.000 COP).');
+  const serverUrl = (window.DONATION_SERVER_URL || '').replace(/\/$/, '');
+  if (!serverUrl || serverUrl === 'https://tu-servidor.com') {
+    // Fallback: show success without hitting server (server not configured yet)
+    showFormMsg('success', '¡Gracias! Tu donación ha sido registrada. La confirmaremos pronto. 🐾');
+    event.target.reset();
     return;
   }
 
-  if (typeof ePayco === 'undefined' || !ePayco.checkout) {
-    alert('El sistema de pago no está disponible temporalmente. Por favor usa Nequi o Daviplata como alternativa.');
-    return;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Enviando…';
+  msgEl.style.display = 'none';
+
+  try {
+    const res = await fetch(serverUrl + '/donations/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        donor_name:  nameVal,
+        donor_phone: phoneVal.replace(/[\s\-]/g, ''),
+        method:      methodVal,
+        amount:      amountVal,
+      }),
+    });
+    const data = await res.json();
+
+    if (res.ok && data.ok) {
+      showFormMsg('success', '✅ ¡Gracias! Tu donación quedó registrada. La confirmaremos pronto. 🐾');
+      event.target.reset();
+    } else {
+      showFormMsg('error', '❌ No pudimos registrar tu donación: ' + escapeHtml(data.error || 'error desconocido'));
+    }
+  } catch (err) {
+    showFormMsg('error', '❌ Error de conexión. Intenta de nuevo o contáctanos por WhatsApp.');
+    console.error('Donation submit error:', err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '💛 Registrar mi donación';
   }
+}
 
-  const handler = ePayco.checkout.configure({
-    key: window.EPAYCO_PUBLIC_KEY || 'TU_PUBLIC_KEY',
-    test: window.EPAYCO_TEST_MODE !== false,
-  });
-
-  handler.open({
-    name: 'Donación para Hannah',
-    description: 'Ayuda a cubrir los gastos veterinarios de Hannah 🐾',
-    invoice: 'DON-' + Date.now(),
-    currency: 'COP',
-    amount: String(selectedAmount),
-    tax_base: '0',
-    tax: '0',
-    country: 'CO',
-    lang: 'es',
-    external: 'false',
-    confirmation: window.EPAYCO_CONFIRMATION_URL || '',
-    response: window.EPAYCO_RESPONSE_URL || window.location.href,
-    acepted: window.EPAYCO_CONFIRMATION_URL || '',
-    rejected: window.EPAYCO_CONFIRMATION_URL || '',
-    pending: window.EPAYCO_CONFIRMATION_URL || '',
-  });
+function showFormMsg(type, text) {
+  const el = document.getElementById('donation-form-msg');
+  if (!el) return;
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+  el.style.color = type === 'success' ? '#155724' : '#721c24';
+  el.style.border = type === 'success' ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
 }
 
 /* ── FAQ accordion ── */

@@ -13,15 +13,9 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
   <link rel="stylesheet" href="./css/styles.css">
 
-  <!-- ePayco Smart Checkout -->
-  <script src="https://checkout.epayco.co/checkout.js"></script>
-
-  <!-- Config (replace before deploy) -->
+  <!-- Config: reemplaza con la URL real de tu servidor backend -->
   <script>
-    window.EPAYCO_PUBLIC_KEY       = 'TU_PUBLIC_KEY_AQUI';
-    window.EPAYCO_TEST_MODE        = true;   // false en producción
-    window.EPAYCO_CONFIRMATION_URL = 'https://tu-servidor.com/webhooks/epayco';
-    window.EPAYCO_RESPONSE_URL     = window.location.href;
+    window.DONATION_SERVER_URL = 'https://tu-servidor.com';
   </script>
 </head>
 <body>
@@ -140,62 +134,69 @@
   <div class="container">
     <h2 class="section-title" id="donaciones-title">💛 ¿Cómo donar?</h2>
     <div class="section-divider"></div>
-    <p class="section-subtitle">Elige el monto que quieras y dona de forma segura. Todo ayuda.</p>
+    <p class="section-subtitle">Dona por Nequi o Daviplata y registra tu consignación aquí para que podamos confirmarte.</p>
 
     <div class="donate-section">
-      <!-- Montos predefinidos -->
-      <p style="font-weight:700;margin-bottom:1rem;">Selecciona un monto (COP):</p>
-      <div class="amount-grid" role="group" aria-label="Montos predefinidos">
-        <button class="amount-btn" onclick="selectAmount(5000, this)"  type="button">$5.000</button>
-        <button class="amount-btn" onclick="selectAmount(10000, this)" type="button">$10.000</button>
-        <button class="amount-btn" onclick="selectAmount(20000, this)" type="button">$20.000</button>
-        <button class="amount-btn" onclick="selectAmount(50000, this)" type="button">$50.000</button>
-        <button class="amount-btn" onclick="selectAmount(100000, this)" type="button">$100.000</button>
-        <button class="amount-btn" onclick="selectAmount(200000, this)" type="button">$200.000</button>
-      </div>
 
-      <!-- Monto libre -->
-      <div class="custom-amount-wrapper">
-        <input
-          type="number"
-          id="custom-amount"
-          placeholder="O ingresa otro monto (ej: 35000)"
-          min="1000"
-          step="1000"
-          autocomplete="off"
-          oninput="onCustomAmountChange(this)"
-          aria-label="Monto personalizado en pesos colombianos"
-        >
-        <button class="btn btn-donate-fixed" onclick="donatePrimary()" type="button"
-                style="flex-shrink:0;width:auto;padding:0.85rem 1.5rem;">
-          💛 Donar con ePayco
-        </button>
+      <!-- Datos de pago -->
+      <p style="font-weight:700;margin-bottom:1rem;font-size:1.1rem;">📲 Transfiere al siguiente número:</p>
+      <div class="donate-methods" style="margin-bottom:1.5rem;">
+        <div class="method-card" style="text-align:center;">
+          <div class="method-icon">📱</div>
+          <div class="method-name">Nequi</div>
+          <div class="method-number">315 469 4934</div>
+          <div class="method-note">Llave: <strong>@luis605</strong></div>
+        </div>
+        <div class="method-card" style="text-align:center;">
+          <div class="method-icon">💙</div>
+          <div class="method-name">Daviplata</div>
+          <div class="method-number">315 469 4934</div>
+          <div class="method-note">Llave: <strong>@luis605</strong></div>
+        </div>
       </div>
-
-      <p style="font-size:0.82rem;color:var(--color-text-muted);margin-top:-0.5rem;margin-bottom:1.5rem;">
-        🔒 Pago seguro procesado por ePayco. Tarjeta de crédito/débito, PSE y más.
-      </p>
 
       <hr style="border:none;border-top:1px solid var(--color-border);margin-bottom:1.5rem;">
 
-      <!-- Métodos alternativos manuales -->
-      <p style="font-weight:700;margin-bottom:1rem;">También puedes donar por:</p>
-      <div class="donate-methods">
-        <div class="method-card">
-          <div class="method-icon">📱</div>
-          <div class="method-name">Nequi</div>
-          <!-- PLACEHOLDER: reemplaza con tu número real -->
-          <div class="method-number">3XX-XXX-XXXX</div>
-          <div class="method-note">Envía tu comprobante por WhatsApp para confirmar</div>
+      <!-- Formulario de registro de consignación -->
+      <p style="font-weight:700;margin-bottom:1rem;font-size:1.05rem;">📝 Después de transferir, regístra tu donación aquí:</p>
+      <p style="font-size:0.87rem;color:var(--color-text-muted);margin-bottom:1.25rem;">
+        Esto nos ayuda a identificar tu pago y confirmarla rápidamente. ¡Gracias por tu generosidad! 🐾
+      </p>
+
+      <form id="donation-form" onsubmit="submitDonationForm(event)" novalidate>
+        <div class="donation-form-grid">
+          <div class="form-field">
+            <label for="don-name">Tu nombre completo *</label>
+            <input type="text" id="don-name" name="donor_name"
+                   placeholder="Ej: María García" required autocomplete="name">
+          </div>
+          <div class="form-field">
+            <label for="don-phone">Tu número de teléfono *</label>
+            <input type="tel" id="don-phone" name="donor_phone"
+                   placeholder="Ej: 3001234567" required autocomplete="tel">
+          </div>
+          <div class="form-field">
+            <label for="don-method">Método que usaste *</label>
+            <select id="don-method" name="method" required>
+              <option value="">— Selecciona —</option>
+              <option value="nequi">Nequi</option>
+              <option value="daviplata">Daviplata</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="don-amount">Monto donado (COP) *</label>
+            <input type="number" id="don-amount" name="amount"
+                   placeholder="Ej: 50000" min="1000" step="1000"
+                   required autocomplete="off">
+          </div>
         </div>
-        <div class="method-card">
-          <div class="method-icon">💙</div>
-          <div class="method-name">Daviplata</div>
-          <!-- PLACEHOLDER: reemplaza con tu número real -->
-          <div class="method-number">3XX-XXX-XXXX</div>
-          <div class="method-note">Envía tu comprobante por WhatsApp para confirmar</div>
-        </div>
-      </div>
+
+        <div id="donation-form-msg" style="display:none;margin-bottom:1rem;padding:0.85rem 1rem;border-radius:8px;font-size:0.95rem;"></div>
+
+        <button type="submit" class="btn btn-donate-fixed" id="don-submit-btn">
+          💛 Registrar mi donación
+        </button>
+      </form>
 
       <div style="text-align:center;margin-top:1.5rem;">
         <button class="btn btn-whatsapp" onclick="shareWhatsApp()" type="button">
@@ -248,19 +249,21 @@
         </button>
         <div class="faq-answer">
           Publicamos todos los comprobantes de gastos veterinarios en la sección de Evidencias.
-          Además, las donaciones por ePayco quedan registradas en nuestro sistema de forma
-          transparente y puedes ver el total recaudado en tiempo real.
+          Cada donación confirmada queda registrada en nuestro repositorio público de GitHub
+          para que cualquiera pueda verificarlo.
         </div>
       </div>
 
       <div class="faq-item" role="listitem">
         <button class="faq-question" aria-expanded="false">
-          ¿Es seguro pagar con ePayco?
+          ¿Cómo funciona el proceso de donación?
           <span class="faq-arrow" aria-hidden="true">▾</span>
         </button>
         <div class="faq-answer">
-          Sí. ePayco es una pasarela de pago certificada, regulada en Colombia, con cifrado SSL
-          y cumplimiento PCI-DSS. Tus datos de tarjeta nunca pasan por nuestros servidores.
+          1. Transfieres el monto que desees al número <strong>315 469 4934</strong> por Nequi o Daviplata (llave: <strong>@luis605</strong>).<br>
+          2. Rellenas el formulario con tu nombre, teléfono, método y monto.<br>
+          3. Revisamos que el pago haya llegado y confirmamos tu donación en menos de 24 horas.<br>
+          4. La barra de progreso se actualiza automáticamente.
         </div>
       </div>
 
@@ -277,23 +280,24 @@
 
       <div class="faq-item" role="listitem">
         <button class="faq-question" aria-expanded="false">
-          ¿Puedo donar desde fuera de Colombia?
+          ¿Por qué me piden nombre y teléfono?
           <span class="faq-arrow" aria-hidden="true">▾</span>
         </button>
         <div class="faq-answer">
-          Sí. ePayco acepta tarjetas internacionales (Visa, Mastercard). Si tienes problemas,
-          contáctanos por WhatsApp.
+          Solo para poder cruzar tu registro con el pago recibido. No compartimos
+          tu información con nadie y solo guardamos los datos mínimos necesarios para
+          confirmar la transacción.
         </div>
       </div>
 
       <div class="faq-item" role="listitem">
         <button class="faq-question" aria-expanded="false">
-          ¿Cómo confirmo que mi donación por Nequi/Daviplata fue registrada?
+          ¿Cuánto tiempo tarda en confirmarse mi donación?
           <span class="faq-arrow" aria-hidden="true">▾</span>
         </button>
         <div class="faq-answer">
-          Envíanos el comprobante de transferencia por WhatsApp al número indicado.
-          Te confirmaremos el registro manualmente en un plazo máximo de 24 horas.
+          Revisamos las consignaciones pendientes diariamente. En general confirmamos en menos de 24 horas.
+          La barra de progreso se actualiza en cuanto confirmamos el pago.
         </div>
       </div>
     </div>

@@ -144,14 +144,15 @@
     <!-- Donations table -->
     <div class="admin-card">
       <div class="admin-card-header">
-        💳 Donaciones
+        📋 Consignaciones registradas
         <span id="donations-count-badge" style="background:#f0e8df;border-radius:50px;padding:0.2rem 0.6rem;font-size:0.8rem;margin-left:0.5rem;"></span>
         <button onclick="loadData()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#e07b39;font-weight:700;font-size:0.9rem;">↻ Actualizar</button>
       </div>
       <div class="admin-card-body">
         <p style="font-size:0.85rem;color:#6b6b6b;margin-bottom:1rem;">
-          Las donaciones por Nequi/Daviplata marcadas como "pendiente" pueden confirmarse manualmente
-          aquí una vez recibido el comprobante. Esta acción notificará al servidor.
+          Aquí aparecen las consignaciones que los donantes registraron. Verifica cada pago en tu
+          cuenta Nequi/Daviplata (<strong>315 469 4934</strong> / llave <strong>@luis605</strong>)
+          y haz clic en <strong>Aprobar</strong> para confirmarlas.
         </p>
         <div id="donations-table-wrapper">
           <p style="color:#6b6b6b;">Cargando…</p>
@@ -161,39 +162,14 @@
 
     <!-- Instructions -->
     <div class="admin-card">
-      <div class="admin-card-header">📝 Cómo confirmar donaciones manuales (Nequi/Daviplata)</div>
+      <div class="admin-card-header">📝 Cómo aprobar consignaciones</div>
       <div class="admin-card-body" style="font-size:0.93rem;line-height:1.7;color:#444;">
         <ol style="padding-left:1.25rem;">
-          <li>Recibe el comprobante del donante por WhatsApp o correo.</li>
-          <li>Verifica que el monto y número de cuenta coincidan.</li>
-          <li>Haz clic en "Confirmar" en la fila correspondiente (solo donaciones con estado "pendiente").</li>
-          <li>Si aún no existe el registro, usa el formulario de abajo para agregarlo.</li>
+          <li>Abre tu app de Nequi o Daviplata y verifica que el monto coincida con el registrado.</li>
+          <li>Compara el número de teléfono del donante con el remitente del pago.</li>
+          <li>Si el pago llegó, haz clic en <strong>Aprobar</strong>. Esto actualizará la barra de progreso del sitio automáticamente.</li>
+          <li>Si el pago <em>no</em> llegó, simplemente ignora ese registro.</li>
         </ol>
-        <hr style="margin:1.5rem 0;border-color:#e8ddd0;">
-        <h3 style="margin-bottom:1rem;">➕ Registrar donación manual</h3>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;">
-          <div>
-            <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.3rem;">Monto (COP)</label>
-            <input type="number" id="man-amount" placeholder="50000" style="width:100%;padding:0.7rem;border:2px solid #e8ddd0;border-radius:8px;font-size:1rem;">
-          </div>
-          <div>
-            <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.3rem;">Método</label>
-            <select id="man-method" style="width:100%;padding:0.7rem;border:2px solid #e8ddd0;border-radius:8px;font-size:1rem;background:#fff;">
-              <option value="nequi">Nequi</option>
-              <option value="daviplata">Daviplata</option>
-              <option value="efectivo">Efectivo</option>
-              <option value="otro">Otro</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.3rem;">Nota (opcional)</label>
-            <input type="text" id="man-note" placeholder="Referencia o comprobante" style="width:100%;padding:0.7rem;border:2px solid #e8ddd0;border-radius:8px;font-size:1rem;">
-          </div>
-        </div>
-        <button onclick="submitManual()" class="btn btn-donate-fixed" style="max-width:240px;margin-top:1rem;">
-          Registrar donación manual
-        </button>
-        <p id="man-result" style="margin-top:0.75rem;font-size:0.9rem;display:none;"></p>
       </div>
     </div>
   </div>
@@ -290,15 +266,16 @@ async function loadDonations() {
         : 'Pendiente';
       const canConfirm = don.status === 'pending';
       return `<tr>
-        <td><code style="font-size:0.78rem;">${escapeHtml(don.transaction_id || '—')}</code></td>
+        <td>${escapeHtml(don.donor_name || '—')}</td>
+        <td>${escapeHtml(don.donor_phone || '—')}</td>
         <td>${escapeHtml(don.date ? new Date(don.date).toLocaleDateString('es-CO') : '—')}</td>
         <td><strong>${formatCOP(don.amount || 0)}</strong></td>
         <td>${escapeHtml(don.method || '—')}</td>
         <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
         <td>
           <button class="btn-confirm" ${canConfirm ? '' : 'disabled'}
-            onclick="confirmManual('${escapeHtml(don.transaction_id || '')}', this)">
-            Confirmar
+            onclick="confirmDonation('${escapeHtml(don.transaction_id || '')}', this)">
+            ${don.status === 'approved' ? '✓' : 'Aprobar'}
           </button>
         </td>
       </tr>`;
@@ -308,7 +285,8 @@ async function loadDonations() {
       <table class="admin-table">
         <thead>
           <tr>
-            <th>ID Transacción</th>
+            <th>Donante</th>
+            <th>Teléfono</th>
             <th>Fecha</th>
             <th>Monto</th>
             <th>Método</th>
@@ -323,16 +301,16 @@ async function loadDonations() {
   }
 }
 
-// ── Confirm a pending donation manually ──
-async function confirmManual(transactionId, btn) {
+// ── Approve a pending donation ──
+async function confirmDonation(transactionId, btn) {
   if (!transactionId) return;
   btn.disabled = true;
   btn.textContent = '…';
   try {
     const serverUrl = (window.WEBHOOK_SERVER_URL || '').replace(/\/$/, '');
-    if (!serverUrl) {
-      alert('WEBHOOK_SERVER_URL no configurado. Edita admin.html y agrega: window.WEBHOOK_SERVER_URL = "https://tu-servidor.com"');
-      btn.disabled = false; btn.textContent = 'Confirmar'; return;
+    if (!serverUrl || serverUrl === 'https://tu-servidor.com') {
+      alert('WEBHOOK_SERVER_URL no configurado. Edita admin.html y reemplaza window.WEBHOOK_SERVER_URL con la URL real de tu servidor.');
+      btn.disabled = false; btn.textContent = 'Aprobar'; return;
     }
     const res = await fetch(serverUrl + '/admin/confirm', {
       method: 'POST',
@@ -341,50 +319,8 @@ async function confirmManual(transactionId, btn) {
     });
     const data = await res.json();
     if (res.ok) { btn.textContent = '✓'; btn.style.background='#888'; await loadData(); }
-    else { alert('Error: ' + (data.error || res.status)); btn.disabled=false; btn.textContent='Confirmar'; }
-  } catch(e) { alert('Error de red: ' + e.message); btn.disabled=false; btn.textContent='Confirmar'; }
-}
-
-// ── Register a manual donation ──
-async function submitManual() {
-  const amount = parseInt(document.getElementById('man-amount').value, 10);
-  const method = document.getElementById('man-method').value;
-  const note   = document.getElementById('man-note').value.trim();
-  const result = document.getElementById('man-result');
-
-  if (!amount || amount < 1000) { alert('Ingresa un monto válido.'); return; }
-
-  const serverUrl = (window.WEBHOOK_SERVER_URL || '').replace(/\/$/, '');
-  if (!serverUrl) {
-    alert('WEBHOOK_SERVER_URL no configurado.');
-    return;
-  }
-
-  result.style.display = 'none';
-  try {
-    const res = await fetch(serverUrl + '/admin/manual-donation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken() },
-      body: JSON.stringify({ amount, method, note }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      result.textContent = '✅ Donación registrada correctamente.';
-      result.style.color = '#27ae60';
-      result.style.display = 'block';
-      document.getElementById('man-amount').value = '';
-      document.getElementById('man-note').value = '';
-      await loadData();
-    } else {
-      result.textContent = '❌ Error: ' + (data.error || res.status);
-      result.style.color = '#e74c3c';
-      result.style.display = 'block';
-    }
-  } catch(e) {
-    result.textContent = '❌ Error de red: ' + e.message;
-    result.style.color = '#e74c3c';
-    result.style.display = 'block';
-  }
+    else { alert('Error: ' + (data.error || res.status)); btn.disabled=false; btn.textContent='Aprobar'; }
+  } catch(e) { alert('Error de red: ' + e.message); btn.disabled=false; btn.textContent='Aprobar'; }
 }
 </script>
 

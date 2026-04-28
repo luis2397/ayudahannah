@@ -1,22 +1,18 @@
 'use strict';
 
 /**
- * Tests for webhook handler and admin routes.
+ * Tests for server routes and helpers.
  * Run with: npm test  (uses Node.js built-in test runner, Node >= 18)
  */
 
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http   = require('node:http');
-const crypto = require('node:crypto');
 
 // ── Set up env before requiring the app ──
-process.env.PORT            = '0'; // random port
-process.env.ADMIN_TOKEN     = 'test-admin-token-secret';
-process.env.EPAYCO_CUSTOMER_ID = '';  // empty → sig validation skipped
-process.env.EPAYCO_P_KEY       = '';  // empty → sig validation skipped
-process.env.WEBHOOK_SECRET  = 'test-webhook-secret';
-process.env.GITHUB_PAT      = '';   // empty → GitHub calls will be mocked
+process.env.PORT        = '0'; // random port
+process.env.ADMIN_TOKEN = 'test-admin-token-secret';
+process.env.GITHUB_PAT  = '';  // empty → GitHub calls will be mocked
 
 const app = require('../src/index');
 
@@ -64,40 +60,78 @@ describe('Health check', () => {
     const { status, body } = await request(server, 'GET', '/health');
     assert.equal(status, 200);
     assert.equal(body.ok, true);
-    assert.equal(body.service, 'ayudahannah-webhook');
+    assert.equal(body.service, 'ayudahannah-server');
   });
 });
 
 // ─────────────────────────────────────────
-describe('ePayco webhook', () => {
-  it('returns 400 when x_transaction_id is missing', async () => {
-    const { status, body } = await request(server, 'POST', '/webhooks/epayco', {
-      x_response: 'Aceptada',
-      x_amount: '10000',
-      x_currency_code: 'COP',
+describe('POST /donations/register', () => {
+  it('returns 400 when donor_name is missing', async () => {
+    const { status, body } = await request(server, 'POST', '/donations/register', {
+      donor_phone: '3001234567',
+      method: 'nequi',
+      amount: 50000,
     });
     assert.equal(status, 400);
-    assert.equal(body.error, 'missing_transaction_id');
+    assert.ok(body.error.includes('donor_name'));
   });
 
-  it('returns 200 for valid transaction (GitHub API call will fail gracefully)', async () => {
-    const { status, body } = await request(server, 'POST', '/webhooks/epayco', {
-      x_transaction_id: 'TXN-' + Date.now(),
-      x_ref_payco: 'REF-001',
-      x_response: 'Aceptada',
-      x_amount: '50000',
-      x_currency_code: 'COP',
-      x_franchise: 'visa',
-      x_approval_code: 'APR001',
+  it('returns 400 when donor_phone is invalid', async () => {
+    const { status, body } = await request(server, 'POST', '/donations/register', {
+      donor_name: 'Ana López',
+      donor_phone: 'abc',
+      method: 'nequi',
+      amount: 50000,
     });
-    // Should return 200 (even if GitHub API fails, we return 200 to ePayco)
-    assert.ok(status === 200 || status === 400, `Expected 200 or 400, got ${status}`);
-    assert.ok(body.ok !== undefined || body.error !== undefined);
+    assert.equal(status, 400);
+    assert.ok(body.error.includes('donor_phone'));
   });
 
-  it('GET /webhooks/epayco also works (ePayco uses both)', async () => {
-    const { status } = await request(server, 'GET', '/webhooks/epayco?x_transaction_id=TXN-GET-1&x_response=Rechazada&x_amount=0&x_currency_code=COP');
-    assert.ok(status === 200 || status === 400);
+  it('returns 400 when method is not nequi or daviplata', async () => {
+    const { status, body } = await request(server, 'POST', '/donations/register', {
+      donor_name: 'Ana López',
+      donor_phone: '3001234567',
+      method: 'epayco',
+      amount: 50000,
+    });
+    assert.equal(status, 400);
+    assert.ok(body.error.includes('method'));
+  });
+
+  it('returns 400 when amount is below minimum (1000 COP)', async () => {
+    const { status, body } = await request(server, 'POST', '/donations/register', {
+      donor_name: 'Ana López',
+      donor_phone: '3001234567',
+      method: 'nequi',
+      amount: 500,
+    });
+    assert.equal(status, 400);
+    assert.ok(body.error.includes('amount'));
+  });
+
+  it('returns 400 when amount is missing', async () => {
+    const { status, body } = await request(server, 'POST', '/donations/register', {
+      donor_name: 'Ana López',
+      donor_phone: '3001234567',
+      method: 'daviplata',
+    });
+    assert.equal(status, 400);
+    assert.ok(body.error.includes('amount'));
+  });
+
+  it('returns 200 or 500 for valid payload (GitHub call will fail without PAT)', async () => {
+    const { status, body } = await request(server, 'POST', '/donations/register', {
+      donor_name: 'Juan Pérez',
+      donor_phone: '3154694934',
+      method: 'nequi',
+      amount: 50000,
+    });
+    // 200 = success, 500 = GitHub not configured (expected in test env)
+    assert.ok(status === 200 || status === 500, `Expected 200 or 500, got ${status}`);
+    if (status === 200) {
+      assert.equal(body.ok, true);
+      assert.ok(body.transaction_id);
+    }
   });
 });
 
@@ -126,26 +160,6 @@ describe('Admin endpoints', () => {
     assert.equal(status, 400);
     assert.ok(body.error);
   });
-
-  it('returns 400 for manual donation with invalid amount', async () => {
-    const { status, body } = await request(
-      server, 'POST', '/admin/manual-donation',
-      { amount: 0, method: 'nequi' },
-      { 'x-admin-token': 'test-admin-token-secret' }
-    );
-    assert.equal(status, 400);
-    assert.ok(body.error);
-  });
-
-  it('returns 400 for manual donation amount below minimum', async () => {
-    const { status, body } = await request(
-      server, 'POST', '/admin/manual-donation',
-      { amount: 500, method: 'nequi' },
-      { 'x-admin-token': 'test-admin-token-secret' }
-    );
-    assert.equal(status, 400);
-    assert.ok(body.error);
-  });
 });
 
 // ─────────────────────────────────────────
@@ -155,24 +169,36 @@ describe('404 handler', () => {
     assert.equal(status, 404);
     assert.equal(body.error, 'not_found');
   });
+
+  it('old webhook route no longer exists', async () => {
+    const { status } = await request(server, 'POST', '/webhooks/epayco', {});
+    assert.equal(status, 404);
+  });
 });
 
 // ─────────────────────────────────────────
 describe('webhook.js unit tests', () => {
-  const { validateEpaycoSignature, normalizeStatus, buildDonationRecord } = require('../src/webhook');
+  const { normalizeStatus, buildDonationRecord } = require('../src/webhook');
 
-  it('normalizeStatus: maps Aceptada to approved', () => {
-    assert.equal(normalizeStatus('Aceptada'), 'approved');
-    assert.equal(normalizeStatus('Accepted'), 'approved');
+  it('normalizeStatus: maps aprobada/approved to approved', () => {
+    assert.equal(normalizeStatus('approved'), 'approved');
+    assert.equal(normalizeStatus('aprobada'), 'approved');
+    assert.equal(normalizeStatus('aceptada'), 'approved');
   });
 
-  it('normalizeStatus: maps Rechazada to rejected', () => {
-    assert.equal(normalizeStatus('Rechazada'), 'rejected');
-    assert.equal(normalizeStatus('Fallida'), 'rejected');
+  it('normalizeStatus: maps rejected variants to rejected', () => {
+    assert.equal(normalizeStatus('rejected'), 'rejected');
+    assert.equal(normalizeStatus('rechazada'), 'rejected');
+    assert.equal(normalizeStatus('fallida'), 'rejected');
   });
 
-  it('normalizeStatus: maps Pendiente to pending', () => {
-    assert.equal(normalizeStatus('Pendiente'), 'pending');
+  it('normalizeStatus: maps pending variants to pending', () => {
+    assert.equal(normalizeStatus('pending'), 'pending');
+    assert.equal(normalizeStatus('pendiente'), 'pending');
+  });
+
+  it('normalizeStatus: maps manual to manual', () => {
+    assert.equal(normalizeStatus('manual'), 'manual');
   });
 
   it('normalizeStatus: unknown values return unknown', () => {
@@ -180,24 +206,21 @@ describe('webhook.js unit tests', () => {
     assert.equal(normalizeStatus('other'), 'unknown');
   });
 
-  it('buildDonationRecord: creates correct record structure', () => {
+  it('buildDonationRecord: creates correct record with status pending', () => {
     const params = {
-      x_transaction_id: 'TXN123',
-      x_ref_payco: 'REF456',
-      x_amount: '75000',
-      x_currency_code: 'COP',
-      x_response: 'Aceptada',
-      x_franchise: 'mastercard',
-      x_approval_code: 'APR789',
+      donor_name: 'María García',
+      donor_phone: '3001234567',
+      method: 'nequi',
+      amount: '75000',
     };
     const rec = buildDonationRecord(params);
-    assert.equal(rec.transaction_id, 'TXN123');
-    assert.equal(rec.ref_payco, 'REF456');
+    assert.ok(rec.transaction_id.startsWith('DON-'));
     assert.equal(rec.amount, 75000);
     assert.equal(rec.currency, 'COP');
-    assert.equal(rec.status, 'approved');
-    assert.equal(rec.method, 'mastercard');
-    assert.equal(rec.approval_code, 'APR789');
+    assert.equal(rec.status, 'pending');
+    assert.equal(rec.method, 'nequi');
+    assert.equal(rec.donor_name, 'María García');
+    assert.equal(rec.donor_phone, '3001234567');
     assert.ok(rec.date);
     // Sensitive data NOT included
     assert.ok(!rec.card_number);
@@ -205,47 +228,19 @@ describe('webhook.js unit tests', () => {
     assert.ok(!rec.customer_email);
   });
 
-  it('validateEpaycoSignature: returns true when credentials not configured', () => {
-    // Credentials are empty in test env
-    const result = validateEpaycoSignature({ x_signature: 'anything' });
-    assert.equal(result, true);
-  });
-
-  it('validateEpaycoSignature: validates correct MD5 signature', () => {
-    // Set test credentials
-    process.env.EPAYCO_CUSTOMER_ID = '100';
-    process.env.EPAYCO_P_KEY = 'testkey';
-
-    const params = {
-      x_ref_payco: 'REF1',
-      x_transaction_id: 'TXN1',
-      x_amount: '10000',
-      x_currency_code: 'COP',
-    };
-    const raw = `100testkey${params.x_ref_payco}${params.x_transaction_id}${params.x_amount}${params.x_currency_code}`;
-    params.x_signature = crypto.createHash('md5').update(raw).digest('hex');
-
-    assert.equal(validateEpaycoSignature(params), true);
-
-    // Clean up
-    process.env.EPAYCO_CUSTOMER_ID = '';
-    process.env.EPAYCO_P_KEY = '';
-  });
-
-  it('validateEpaycoSignature: rejects wrong signature', () => {
-    process.env.EPAYCO_CUSTOMER_ID = '100';
-    process.env.EPAYCO_P_KEY = 'testkey';
-
-    const result = validateEpaycoSignature({
-      x_ref_payco: 'REF1',
-      x_transaction_id: 'TXN1',
-      x_amount: '10000',
-      x_currency_code: 'COP',
-      x_signature: 'aabbccddeeff00112233445566778899', // wrong but valid hex length
+  it('buildDonationRecord: strips non-digits from phone', () => {
+    const rec = buildDonationRecord({
+      donor_name: 'Test',
+      donor_phone: '315-469-4934',
+      method: 'daviplata',
+      amount: 10000,
     });
-    assert.equal(result, false);
+    assert.equal(rec.donor_phone, '3154694934');
+  });
 
-    process.env.EPAYCO_CUSTOMER_ID = '';
-    process.env.EPAYCO_P_KEY = '';
+  it('buildDonationRecord: truncates long donor_name to 80 chars', () => {
+    const longName = 'A'.repeat(100);
+    const rec = buildDonationRecord({ donor_name: longName, donor_phone: '3001234567', method: 'nequi', amount: 5000 });
+    assert.ok(rec.donor_name.length <= 80);
   });
 });

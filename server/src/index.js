@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const express = require('express');
 const crypto  = require('crypto');
-const { validateEpaycoSignature, buildDonationRecord } = require('./webhook');
+const { buildDonationRecord } = require('./webhook');
 const { persistDonation } = require('./github');
 
 const app  = express();
@@ -19,7 +19,7 @@ app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  // Allow GitHub Pages to call admin endpoints
+  // Allow GitHub Pages to call endpoints
   res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token');
@@ -28,46 +28,44 @@ app.use((_req, res, next) => {
 app.options('*', (_req, res) => res.sendStatus(204));
 
 // ── Health check ──
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'ayudahannah-webhook' }));
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'ayudahannah-server' }));
 
 // ══════════════════════════════════════════
-// ePayco Webhook  POST /webhooks/epayco
-// (ePayco also supports GET for some flows)
+// Public: register a donor's consignment
+// POST /donations/register
 // ══════════════════════════════════════════
-app.all('/webhooks/epayco', async (req, res) => {
-  // Collect params from POST body or GET query
-  const params = { ...req.query, ...req.body };
+app.post('/donations/register', async (req, res) => {
+  const { donor_name, donor_phone, method, amount } = req.body;
 
-  console.log('[epayco] Received webhook:', {
-    x_ref_payco:     params.x_ref_payco,
-    x_transaction_id: params.x_transaction_id,
-    x_response:      params.x_response,
-    x_amount:        params.x_amount,
+  // ── Validate required fields ──
+  if (!donor_name || !String(donor_name).trim()) {
+    return res.status(400).json({ error: 'donor_name is required' });
+  }
+  if (!donor_phone || !/^\d{7,15}$/.test(String(donor_phone).replace(/[\s\-]/g, ''))) {
+    return res.status(400).json({ error: 'donor_phone must be a valid phone number (7-15 digits)' });
+  }
+  if (!method || !['nequi', 'daviplata'].includes(String(method).toLowerCase())) {
+    return res.status(400).json({ error: 'method must be "nequi" or "daviplata"' });
+  }
+  if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) < 1000) {
+    return res.status(400).json({ error: 'amount must be at least 1000 COP' });
+  }
+
+  const donation = buildDonationRecord({ donor_name, donor_phone, method, amount });
+
+  console.log('[register] New pending donation:', {
+    donor_name:  donation.donor_name,
+    method:      donation.method,
+    amount:      donation.amount,
+    transaction_id: donation.transaction_id,
   });
 
-  // ── 1. Validate signature ──
-  const sigValid = validateEpaycoSignature(params);
-  if (!sigValid) {
-    console.warn('[epayco] Invalid signature – rejecting');
-    return res.status(400).json({ error: 'invalid_signature' });
-  }
-
-  // ── 2. Require a transaction ID ──
-  if (!params.x_transaction_id) {
-    return res.status(400).json({ error: 'missing_transaction_id' });
-  }
-
-  // ── 3. Build normalized donation record ──
-  const donation = buildDonationRecord(params);
-
-  // ── 4. Persist (idempotent) ──
   try {
     const { skipped } = await persistDonation(donation);
-    return res.json({ ok: true, skipped });
+    return res.json({ ok: true, skipped, transaction_id: donation.transaction_id });
   } catch (err) {
-    console.error('[epayco] Failed to persist donation:', err.message);
-    // Return 200 to ePayco so it doesn't keep retrying for errors on our side
-    return res.status(200).json({ ok: false, error: 'internal_error', message: err.message });
+    console.error('[register] Failed to persist donation:', err.message);
+    return res.status(500).json({ ok: false, error: 'internal_error', message: err.message });
   }
 });
 
@@ -82,7 +80,6 @@ const TOKEN_COMPARISON_LENGTH = 128;
 function requireAdmin(req, res, next) {
   const adminToken = process.env.ADMIN_TOKEN;
   if (!adminToken) {
-    // If no token configured, block all admin routes
     return res.status(503).json({ error: 'admin_not_configured' });
   }
 
@@ -102,7 +99,7 @@ function requireAdmin(req, res, next) {
 }
 
 // ══════════════════════════════════════════
-// Admin: confirm a pending manual donation
+// Admin: approve a pending donation
 // POST /admin/confirm
 // ══════════════════════════════════════════
 app.post('/admin/confirm', requireAdmin, async (req, res) => {
@@ -128,7 +125,7 @@ app.post('/admin/confirm', requireAdmin, async (req, res) => {
       'data/donations.json',
       donationsData,
       sha,
-      `chore: manually confirm donation ${transaction_id} [skip ci]`
+      `chore: approve donation ${transaction_id} [skip ci]`
     );
 
     // Recalculate summary
@@ -143,43 +140,12 @@ app.post('/admin/confirm', requireAdmin, async (req, res) => {
       'data/summary.json',
       { ...summaryData, raised, donations_count: count, percentage: pct, last_updated: new Date().toISOString() },
       summarySha,
-      `chore: update summary after manual confirm [skip ci]`
+      `chore: update summary after approving donation [skip ci]`
     );
 
     return res.json({ ok: true });
   } catch (err) {
     console.error('[admin/confirm]', err.message);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// ══════════════════════════════════════════
-// Admin: register a manual donation (Nequi/Daviplata)
-// POST /admin/manual-donation
-// ══════════════════════════════════════════
-app.post('/admin/manual-donation', requireAdmin, async (req, res) => {
-  const { amount, method, note } = req.body;
-  if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) < 1000) {
-    return res.status(400).json({ error: 'invalid amount (minimum 1000 COP)' });
-  }
-
-  const donation = {
-    transaction_id: `MANUAL-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    ref_payco: '',
-    date: new Date().toISOString(),
-    amount: parseFloat(amount),
-    currency: 'COP',
-    status: 'manual',
-    method: String(method || 'manual').slice(0, 30),
-    approval_code: '',
-    note: String(note || '').slice(0, 100),
-  };
-
-  try {
-    const { skipped } = await persistDonation(donation);
-    return res.json({ ok: true, skipped, transaction_id: donation.transaction_id });
-  } catch (err) {
-    console.error('[admin/manual-donation]', err.message);
     return res.status(500).json({ error: err.message });
   }
 });
@@ -197,9 +163,10 @@ app.use((err, _req, res, _next) => {
 // ── Start ──
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`✅ Ayuda Hannah webhook server running on port ${PORT}`);
-    console.log(`   Health: http://localhost:${PORT}/health`);
-    console.log(`   Webhook: http://localhost:${PORT}/webhooks/epayco`);
+    console.log(`✅ Ayuda Hannah server running on port ${PORT}`);
+    console.log(`   Health:   http://localhost:${PORT}/health`);
+    console.log(`   Register: http://localhost:${PORT}/donations/register`);
+    console.log(`   Confirm:  http://localhost:${PORT}/admin/confirm`);
   });
 }
 

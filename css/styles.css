@@ -552,6 +552,39 @@ footer .footer-paws { font-size: 1.5rem; margin-bottom: 0.5rem; }
   .amount-grid { grid-template-columns: 1fr 1fr; }
 }
 
+/* ── Donation Form ── */
+.donation-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.form-field { display: flex; flex-direction: column; gap: 0.4rem; }
+.form-field label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.form-field input,
+.form-field select {
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: var(--font-main);
+  background: #fff;
+  transition: border-color var(--transition);
+}
+.form-field input:focus,
+.form-field select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.form-field input:invalid:not(:placeholder-shown),
+.form-field select:invalid:not(:placeholder-shown) {
+  border-color: var(--color-danger);
+}
+
 /* ── Admin ── */
 .admin-table {
   width: 100%;

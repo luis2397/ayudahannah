@@ -1,77 +1,46 @@
 'use strict';
 
-const crypto = require('crypto');
+/**
+ * Utility helpers for donation records.
+ */
 
 /**
- * Validates the ePayco webhook signature.
- *
- * ePayco sends x_signature = MD5(p_cust_id_cliente + p_key + x_ref_payco +
- *                                   x_transaction_id + x_amount + x_currency_code)
- *
- * @param {object} params - The parsed body/query params from ePayco
- * @returns {boolean}
+ * Maps a status string to a normalized status value.
+ * @param {string} status
+ * @returns {'approved'|'rejected'|'pending'|'manual'|'unknown'}
  */
-function validateEpaycoSignature(params) {
-  const customerId = process.env.EPAYCO_CUSTOMER_ID;
-  const pKey = process.env.EPAYCO_P_KEY;
-
-  if (!customerId || !pKey) {
-    // If credentials are not configured, skip validation (useful for tests)
-    console.warn('[webhook] EPAYCO_CUSTOMER_ID or EPAYCO_P_KEY not set – skipping sig validation');
-    return true;
-  }
-
-  const {
-    x_ref_payco,
-    x_transaction_id,
-    x_amount,
-    x_currency_code,
-    x_signature,
-  } = params;
-
-  if (!x_signature) return false;
-
-  const raw = `${customerId}${pKey}${x_ref_payco}${x_transaction_id}${x_amount}${x_currency_code}`;
-  const expected = crypto.createHash('md5').update(raw).digest('hex');
-
-  return crypto.timingSafeEqual(
-    Buffer.from(expected, 'hex'),
-    Buffer.from(x_signature.toLowerCase(), 'hex')
-  );
-}
-
-/**
- * Maps ePayco's x_response to a normalized status string.
- * @param {string} xResponse
- * @returns {'approved'|'rejected'|'pending'|'unknown'}
- */
-function normalizeStatus(xResponse) {
-  const r = (xResponse || '').trim().toLowerCase();
-  if (r === 'aceptada' || r === 'accepted') return 'approved';
-  if (r === 'rechazada' || r === 'rejected' || r === 'fallida' || r === 'failed') return 'rejected';
-  if (r === 'pendiente' || r === 'pending') return 'pending';
+function normalizeStatus(status) {
+  const s = (status || '').trim().toLowerCase();
+  if (s === 'approved' || s === 'aprobada' || s === 'aceptada') return 'approved';
+  if (s === 'rejected' || s === 'rechazada' || s === 'fallida') return 'rejected';
+  if (s === 'pending'  || s === 'pendiente') return 'pending';
+  if (s === 'manual') return 'manual';
   return 'unknown';
 }
 
 /**
- * Builds a donation record from ePayco params.
+ * Builds a donation record from a public registration form submission.
  * Only stores minimum data required for transparency.
- * Does NOT store card data, CVV, or other sensitive info.
+ * Does NOT store card data or other sensitive info.
  *
- * @param {object} params
+ * @param {object} params - Parsed form fields
+ * @param {string} params.donor_name  - Donor's full name
+ * @param {string} params.donor_phone - Donor's phone number
+ * @param {string} params.method      - 'nequi' | 'daviplata'
+ * @param {number} params.amount      - Amount in COP
  * @returns {object}
  */
 function buildDonationRecord(params) {
   return {
-    transaction_id: String(params.x_transaction_id || ''),
-    ref_payco: String(params.x_ref_payco || ''),
+    transaction_id: `DON-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     date: new Date().toISOString(),
-    amount: parseFloat(params.x_amount) || 0,
-    currency: String(params.x_currency_code || 'COP'),
-    status: normalizeStatus(params.x_response),
-    method: String(params.x_franchise || 'epayco'),
-    approval_code: String(params.x_approval_code || ''),
+    amount: parseFloat(params.amount) || 0,
+    currency: 'COP',
+    status: 'pending',
+    method: String(params.method || 'manual').slice(0, 30),
+    donor_name: String(params.donor_name || '').slice(0, 80),
+    donor_phone: String(params.donor_phone || '').replace(/\D/g, '').slice(0, 15),
   };
 }
 
-module.exports = { validateEpaycoSignature, normalizeStatus, buildDonationRecord };
+module.exports = { normalizeStatus, buildDonationRecord };

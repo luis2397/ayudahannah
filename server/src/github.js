@@ -131,46 +131,41 @@ async function persistDonation(donation) {
     return { skipped: true };
   }
 
-  // Only persist approved donations in the public list
-  if (donation.status !== 'approved' && donation.status !== 'manual') {
-    console.log(`[github] Donation ${donation.transaction_id} not approved (${donation.status}) – skipping`);
-    return { skipped: true };
-  }
-
   donations.push(donation);
   donationsData.donations = donations;
 
-  // Recalculate summary (only approved and manual donations count toward the total)
-  const { content: summaryData, sha: summarySha } = await readRepoFile('data/summary.json');
-  const goal = parseFloat(process.env.CAMPAIGN_GOAL) || summaryData.goal || 3000000;
-  const approvedDonations = donations.filter(d => d.status === 'approved' || d.status === 'manual');
-  const raised = approvedDonations.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
-  const count  = approvedDonations.length;
-  const pct    = Math.min(100, Math.round((raised / goal) * 100));
-
-  const newSummary = {
-    goal,
-    currency: summaryData.currency || 'COP',
-    raised,
-    donations_count: count,
-    percentage: pct,
-    last_updated: new Date().toISOString(),
-  };
-
   const shortId = donation.transaction_id.slice(-8);
-  await writeRepoFile(
-    'data/donations.json',
-    donationsData,
-    donationsSha,
-    `chore: add donation ${shortId} [skip ci]`
-  );
+  const commitMsg = `chore: register donation ${shortId} [skip ci]`;
 
-  await writeRepoFile(
-    'data/summary.json',
-    newSummary,
-    summarySha,
-    `chore: update summary – raised ${raised} COP (${count} donations) [skip ci]`
-  );
+  if (donation.status === 'approved' || donation.status === 'manual') {
+    // Recalculate summary (only approved and manual donations count toward the total)
+    const { content: summaryData, sha: summarySha } = await readRepoFile('data/summary.json');
+    const goal = parseFloat(process.env.CAMPAIGN_GOAL) || summaryData.goal || 3000000;
+    const approvedDonations = donations.filter(d => d.status === 'approved' || d.status === 'manual');
+    const raised = approvedDonations.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+    const count  = approvedDonations.length;
+    const pct    = Math.min(100, Math.round((raised / goal) * 100));
+
+    const newSummary = {
+      goal,
+      currency: summaryData.currency || 'COP',
+      raised,
+      donations_count: count,
+      percentage: pct,
+      last_updated: new Date().toISOString(),
+    };
+
+    await writeRepoFile('data/donations.json', donationsData, donationsSha, commitMsg);
+    await writeRepoFile(
+      'data/summary.json',
+      newSummary,
+      summarySha,
+      `chore: update summary – raised ${raised} COP (${count} donations) [skip ci]`
+    );
+  } else {
+    // Pending donation: store in donations.json but do not update summary
+    await writeRepoFile('data/donations.json', donationsData, donationsSha, commitMsg);
+  }
 
   console.log(`[github] Persisted donation ${donation.transaction_id}: ${donation.amount} COP`);
   return { skipped: false };
