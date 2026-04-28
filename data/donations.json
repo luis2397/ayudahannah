@@ -4,7 +4,6 @@
     {"transaction_id": "DON-1745840000000-abc002", "date": "2026-04-28T14:00:00.000Z", "amount": 10000, "currency": "COP", "status": "approved", "method": "Nequi", "donor_name": "CINDY", "donor_phone": "3006281966"},
     {"transaction_id": "DON-1745840000000-abc003", "date": "2026-04-28T14:00:00.000Z", "amount": 100000, "currency": "COP", "status": "approved", "method": "Llave", "donor_name": "Martha cecilia Gutiérrez", "donor_phone": "3105370507"},
     {"transaction_id": "DON-1745840000000-abc004", "date": "2026-04-28T14:00:00.000Z", "amount": 50000, "currency": "COP", "status": "approved", "method": "Llave", "donor_name": "Andrea giraldo", "donor_phone": "3006281966"},
-    {"transaction_id": "DON-1745840000000-abc005", "date": "2026-04-28T14:00:00.000Z", "amount": 20000, "currency": "COP", "status": "approved", "method": "Nequi", "donor_name": "Martha cecilia Gutiérrez", "donor_phone": "3105370507"},
-    
+    {"transaction_id": "DON-1745840000000-abc005", "date": "2026-04-28T14:00:00.000Z", "amount": 20000, "currency": "COP", "status": "approved", "method": "Nequi", "donor_name": "Martha cecilia Gutiérrez", "donor_phone": "3105370507"}
   ]
 }
