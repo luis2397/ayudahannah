@@ -125,7 +125,7 @@ app.post('/admin/confirm', requireAdmin, async (req, res) => {
       'data/donations.json',
       donationsData,
       sha,
-      `chore: approve donation ${transaction_id} [skip ci]`
+      `chore: approve donation ${transaction_id}`
     );
 
     // Recalculate summary
@@ -140,7 +140,7 @@ app.post('/admin/confirm', requireAdmin, async (req, res) => {
       'data/summary.json',
       { ...summaryData, raised, donations_count: count, percentage: pct, last_updated: new Date().toISOString() },
       summarySha,
-      `chore: update summary after approving donation [skip ci]`
+      `chore: update summary after approving donation`
     );
 
     return res.json({ ok: true });
