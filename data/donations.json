@@ -1,3 +1,15 @@
 {
-  "donations": []
+  "donations": [
+    {
+      "transaction_id": "DON-1745840000000-abc001",
+      "date": "2026-04-28T14:00:00.000Z",
+      "amount": 50000,
+      "currency": "COP",
+      "status": "approved",
+      "method": "nequi",
+      "donor_name": "Lina Maria Leiton",
+      "donor_phone": "3153264960"
+    }
+
+  ]
 }
