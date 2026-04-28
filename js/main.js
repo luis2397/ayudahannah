@@ -126,6 +126,59 @@ async function loadEvidences() {
   }
 }
 
+/* ── GitHub API helpers (serverless mode) ── */
+
+function _ghBase64Encode(str) {
+  // btoa doesn't handle multi-byte UTF-8 (e.g. accented names); this does.
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+function _ghBase64Decode(b64) {
+  return decodeURIComponent(escape(atob(b64)));
+}
+
+async function ghRead(filePath) {
+  const owner  = window.GITHUB_OWNER  || 'luis2397';
+  const repo   = window.GITHUB_REPO   || 'ayudahannah';
+  const branch = window.GITHUB_BRANCH || 'main';
+  const token  = window.GITHUB_DONATIONS_TOKEN;
+  const headers = { 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  if (token) headers['Authorization'] = `token ${token}`;
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`,
+    { headers }
+  );
+  if (!res.ok) throw new Error(`GitHub read error (${res.status})`);
+  const data = await res.json();
+  return { content: JSON.parse(_ghBase64Decode(data.content.replace(/\s/g, ''))), sha: data.sha };
+}
+
+async function ghWrite(filePath, content, sha, message) {
+  const owner  = window.GITHUB_OWNER  || 'luis2397';
+  const repo   = window.GITHUB_REPO   || 'ayudahannah';
+  const branch = window.GITHUB_BRANCH || 'main';
+  const token  = window.GITHUB_DONATIONS_TOKEN;
+  if (!token) throw new Error('GITHUB_DONATIONS_TOKEN no configurado');
+  const encoded = _ghBase64Encode(JSON.stringify(content, null, 2) + '\n');
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: JSON.stringify({ message, content: encoded, sha, branch }),
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`GitHub write error (${res.status}): ${err.message || ''}`);
+  }
+}
+
 /* ── Donation form submission ── */
 async function submitDonationForm(event) {
   event.preventDefault();
@@ -134,7 +187,6 @@ async function submitDonationForm(event) {
   const phoneVal  = document.getElementById('don-phone').value.trim();
   const methodVal = document.getElementById('don-method').value;
   const amountVal = parseInt(document.getElementById('don-amount').value, 10);
-  const msgEl     = document.getElementById('donation-form-msg');
   const submitBtn = document.getElementById('don-submit-btn');
 
   // Client-side validation
@@ -147,39 +199,39 @@ async function submitDonationForm(event) {
     showFormMsg('error', 'El monto mínimo de donación es $1.000 COP.'); return;
   }
 
-  const serverUrl = (window.DONATION_SERVER_URL || '').replace(/\/$/, '');
-  if (!serverUrl || serverUrl === 'https://tu-servidor.com') {
-    // Fallback: show success without hitting server (server not configured yet)
-    showFormMsg('success', '¡Gracias! Tu donación ha sido registrada. La confirmaremos pronto. 🐾');
-    event.target.reset();
-    return;
-  }
-
   submitBtn.disabled = true;
   submitBtn.textContent = 'Enviando…';
-  msgEl.style.display = 'none';
 
   try {
-    const res = await fetch(serverUrl + '/donations/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        donor_name:  nameVal,
-        donor_phone: phoneVal.replace(/[\s\-]/g, ''),
-        method:      methodVal,
-        amount:      amountVal,
-      }),
-    });
-    const data = await res.json();
+    const donation = {
+      transaction_id: `DON-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      date:       new Date().toISOString(),
+      amount:     amountVal,
+      currency:   'COP',
+      status:     'pending',
+      method:     methodVal,
+      donor_name:  nameVal.slice(0, 80),
+      donor_phone: phoneVal.replace(/[\s\-]/g, '').slice(0, 15),
+    };
 
-    if (res.ok && data.ok) {
-      showFormMsg('success', '✅ ¡Gracias! Tu donación quedó registrada. La confirmaremos pronto. 🐾');
-      event.target.reset();
-    } else {
-      showFormMsg('error', '❌ No pudimos registrar tu donación: ' + escapeHtml(data.error || 'error desconocido'));
+    const { content: donationsData, sha } = await ghRead('data/donations.json');
+    const donations = donationsData.donations || [];
+    // Idempotency: avoid duplicates on double-click
+    if (!donations.some(d => d.transaction_id === donation.transaction_id)) {
+      donations.push(donation);
+      donationsData.donations = donations;
+      await ghWrite(
+        'data/donations.json',
+        donationsData,
+        sha,
+        `chore: register donation ${donation.transaction_id.slice(-8)}`
+      );
     }
+
+    showFormMsg('success', '✅ ¡Gracias! Tu donación quedó registrada. La confirmaremos pronto. 🐾');
+    event.target.reset();
   } catch (err) {
-    showFormMsg('error', '❌ Error de conexión. Intenta de nuevo o contáctanos por WhatsApp.');
+    showFormMsg('error', '❌ Error al registrar. Intenta de nuevo o contáctanos por WhatsApp.');
     console.error('Donation submit error:', err.message);
   } finally {
     submitBtn.disabled = false;
