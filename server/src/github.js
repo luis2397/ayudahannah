@@ -135,7 +135,7 @@ async function persistDonation(donation) {
   donationsData.donations = donations;
 
   const shortId = donation.transaction_id.slice(-8);
-  const commitMsg = `chore: register donation ${shortId} [skip ci]`;
+  const commitMsg = `chore: register donation ${shortId}`;
 
   if (donation.status === 'approved' || donation.status === 'manual') {
     // Recalculate summary (only approved and manual donations count toward the total)
@@ -160,7 +160,7 @@ async function persistDonation(donation) {
       'data/summary.json',
       newSummary,
       summarySha,
-      `chore: update summary – raised ${raised} COP (${count} donations) [skip ci]`
+      `chore: update summary – raised ${raised} COP (${count} donations)`
     );
   } else {
     // Pending donation: store in donations.json but do not update summary

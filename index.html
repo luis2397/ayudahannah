@@ -13,7 +13,15 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
   <link rel="stylesheet" href="./css/styles.css">
 
-  <!-- Config: reemplaza con la URL real de tu servidor backend -->
+  <!-- Configuración Google Forms para registrar donaciones.
+       Pasos:
+       1. Crea un formulario en https://forms.google.com con los campos:
+          Nombre, Teléfono, Método de pago, Monto (COP)
+       2. Abre el formulario en modo vista previa, inspecciona los inputs y copia
+          los atributos "name" de cada campo (tienen el formato entry.XXXXXXXXXX).
+       3. En la URL del formulario copia el ID (la parte entre /d/e/ y /viewform).
+       4. Reemplaza los valores REEMPLAZA_* de abajo con los datos reales.
+  -->
   <script>
     window.GOOGLE_FORM_ID     = '1FAIpQLSe7wXwVhwEyz5OUcK2AXELUskqjaKRRNEO1NAyjd0d4tli95Q';
     window.GF_ENTRY_NAME      = 'entry.422575736';
@@ -197,9 +205,9 @@
             <label for="don-method">Método que usaste *</label>
             <select id="don-method" name="method" required>
               <option value="">— Selecciona —</option>
-              <option value="nequi">Nequi</option>
-              <option value="daviplata">Daviplata</option>
-              <option value="llave">Llave</option>
+              <option value="Nequi">Nequi</option>
+              <option value="Daviplata">Daviplata</option>
+              <option value="Llave">Llave (@luis605)</option>
             </select>
           </div>
           <div class="form-field">
@@ -215,6 +223,9 @@
         <button type="submit" class="btn btn-donate-fixed" id="don-submit-btn">
           💛 Registrar mi donación
         </button>
+        <p style="text-align:center;margin-top:0.75rem;font-size:0.82rem;color:var(--color-text-muted);">
+          ¿El formulario no funciona? <a href="https://docs.google.com/forms/d/e/1FAIpQLSe7wXwVhwEyz5OUcK2AXELUskqjaKRRNEO1NAyjd0d4tli95Q/viewform" target="_blank" rel="noopener">Regístrala directamente aquí →</a>
+        </p>
       </form>
 
       <div style="text-align:center;margin-top:1.5rem;">

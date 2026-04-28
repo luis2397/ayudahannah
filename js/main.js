@@ -126,7 +126,7 @@ async function loadEvidences() {
   }
 }
 
-/* ── Donation form submission ── */
+/* ── Donation form submission (Google Forms) ── */
 async function submitDonationForm(event) {
   event.preventDefault();
 
@@ -134,7 +134,6 @@ async function submitDonationForm(event) {
   const phoneVal  = document.getElementById('don-phone').value.trim();
   const methodVal = document.getElementById('don-method').value;
   const amountVal = parseInt(document.getElementById('don-amount').value, 10);
-  const msgEl     = document.getElementById('donation-form-msg');
   const submitBtn = document.getElementById('don-submit-btn');
 
   // Client-side validation
@@ -147,39 +146,32 @@ async function submitDonationForm(event) {
     showFormMsg('error', 'El monto mínimo de donación es $1.000 COP.'); return;
   }
 
-  const serverUrl = (window.DONATION_SERVER_URL || '').replace(/\/$/, '');
-  if (!serverUrl || serverUrl === 'https://tu-servidor.com') {
-    // Fallback: show success without hitting server (server not configured yet)
-    showFormMsg('success', '¡Gracias! Tu donación ha sido registrada. La confirmaremos pronto. 🐾');
-    event.target.reset();
+  const formId = window.GOOGLE_FORM_ID;
+  if (!formId || formId.includes('REEMPLAZA')) {
+    showFormMsg('error', '❌ Formulario no configurado. Contáctanos por WhatsApp para reportar tu donación.');
     return;
   }
 
   submitBtn.disabled = true;
   submitBtn.textContent = 'Enviando…';
-  msgEl.style.display = 'none';
 
   try {
-    const res = await fetch(serverUrl + '/donations/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        donor_name:  nameVal,
-        donor_phone: phoneVal.replace(/[\s\-]/g, ''),
-        method:      methodVal,
-        amount:      amountVal,
-      }),
-    });
-    const data = await res.json();
+    const body = new URLSearchParams();
+    body.set(window.GF_ENTRY_NAME,   nameVal.slice(0, 80));
+    body.set(window.GF_ENTRY_PHONE,  phoneVal.replace(/[\s\-]/g, '').slice(0, 15));
+    body.set(window.GF_ENTRY_METHOD, methodVal);
+    body.set(window.GF_ENTRY_AMOUNT, String(amountVal));
 
-    if (res.ok && data.ok) {
-      showFormMsg('success', '✅ ¡Gracias! Tu donación quedó registrada. La confirmaremos pronto. 🐾');
-      event.target.reset();
-    } else {
-      showFormMsg('error', '❌ No pudimos registrar tu donación: ' + escapeHtml(data.error || 'error desconocido'));
-    }
+    // Google Forms doesn't allow CORS reads; mode 'no-cors' submits without reading the response.
+    await fetch(
+      `https://docs.google.com/forms/d/e/${formId}/formResponse`,
+      { method: 'POST', mode: 'no-cors', body }
+    );
+
+    showFormMsg('success', '✅ ¡Gracias! Tu donación quedó registrada. La confirmaremos pronto. 🐾');
+    event.target.reset();
   } catch (err) {
-    showFormMsg('error', '❌ Error de conexión. Intenta de nuevo o contáctanos por WhatsApp.');
+    showFormMsg('error', '❌ Error al enviar. Intenta de nuevo o contáctanos por WhatsApp.');
     console.error('Donation submit error:', err.message);
   } finally {
     submitBtn.disabled = false;
