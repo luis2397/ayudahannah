@@ -74,6 +74,11 @@ app.all('/webhooks/epayco', async (req, res) => {
 // ══════════════════════════════════════════
 // Admin middleware – validates ADMIN_TOKEN
 // ══════════════════════════════════════════
+// Minimum buffer length for timing-safe token comparison.
+// Both buffers are padded to this length so that crypto.timingSafeEqual
+// always operates on equal-length inputs regardless of the actual token length.
+const TOKEN_COMPARISON_LENGTH = 128;
+
 function requireAdmin(req, res, next) {
   const adminToken = process.env.ADMIN_TOKEN;
   if (!adminToken) {
@@ -87,8 +92,8 @@ function requireAdmin(req, res, next) {
   }
 
   // Constant-time comparison to prevent timing attacks
-  const a = Buffer.from(provided.padEnd(64));
-  const b = Buffer.from(adminToken.padEnd(64));
+  const a = Buffer.from(provided.padEnd(TOKEN_COMPARISON_LENGTH));
+  const b = Buffer.from(adminToken.padEnd(TOKEN_COMPARISON_LENGTH));
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
     return res.status(403).json({ error: 'forbidden' });
   }

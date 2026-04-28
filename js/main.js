@@ -15,7 +15,10 @@ function formatCOP(value) {
 }
 
 function formatDate(dateStr) {
-  const d = new Date(dateStr + (dateStr.length === 10 ? 'T00:00:00' : ''));
+  // Ensure ISO-8601 strings are parsed as local time when only a date is given
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr + 'T00:00:00' : dateStr;
+  const d = new Date(normalized);
+  if (isNaN(d.getTime())) return dateStr; // fallback to raw string
   return d.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 

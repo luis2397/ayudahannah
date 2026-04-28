@@ -140,11 +140,12 @@ async function persistDonation(donation) {
   donations.push(donation);
   donationsData.donations = donations;
 
-  // Recalculate summary
+  // Recalculate summary (only approved and manual donations count toward the total)
   const { content: summaryData, sha: summarySha } = await readRepoFile('data/summary.json');
   const goal = parseFloat(process.env.CAMPAIGN_GOAL) || summaryData.goal || 3000000;
-  const raised = donations.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
-  const count  = donations.length;
+  const approvedDonations = donations.filter(d => d.status === 'approved' || d.status === 'manual');
+  const raised = approvedDonations.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+  const count  = approvedDonations.length;
   const pct    = Math.min(100, Math.round((raised / goal) * 100));
 
   const newSummary = {
