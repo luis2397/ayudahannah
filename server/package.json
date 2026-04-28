@@ -1,0 +1,24 @@
+{
+  "name": "ayudahannah-server",
+  "version": "1.0.0",
+  "description": "Webhook server for Ayuda Hannah donation campaign",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test tests/",
+    "lint": "eslint src/ tests/ --ext .js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
+  "keywords": ["donations", "epayco", "webhook", "hannah"],
+  "license": "MIT"
+}

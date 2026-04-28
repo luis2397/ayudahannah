@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Ayuda a Hannah, mi perrita que está en estado delicado. Juntos podemos darle una segunda oportunidad.">
+  <meta property="og:title" content="🐾 Ayuda a Hannah">
+  <meta property="og:description" content="Mi perrita Hannah está enferma y necesita tu ayuda. Cada donación cuenta.">
+  <meta property="og:image" content="./assets/hannah-og.jpg">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <title>🐾 Ayuda a Hannah</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+  <link rel="stylesheet" href="./css/styles.css">
+
+  <!-- ePayco Smart Checkout -->
+  <script src="https://checkout.epayco.co/checkout.js"></script>
+
+  <!-- Config (replace before deploy) -->
+  <script>
+    window.EPAYCO_PUBLIC_KEY       = 'TU_PUBLIC_KEY_AQUI';
+    window.EPAYCO_TEST_MODE        = true;   // false en producción
+    window.EPAYCO_CONFIRMATION_URL = 'https://tu-servidor.com/webhooks/epayco';
+    window.EPAYCO_RESPONSE_URL     = window.location.href;
+  </script>
+</head>
+<body>
+
+<!-- ══ STICKY NAV ══ -->
+<nav class="sticky" role="navigation" aria-label="Navegación principal">
+  <span class="nav-brand">🐾 Ayuda a Hannah</span>
+  <ul class="nav-links">
+    <li><a href="#historia">Historia</a></li>
+    <li><a href="#donaciones">Donar</a></li>
+    <li><a href="#actualizaciones">Actualizaciones</a></li>
+    <li><a href="#evidencias">Evidencias</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ul>
+</nav>
+
+<!-- ══ HERO ══ -->
+<header class="hero" role="banner">
+  <div class="hero-paw" aria-hidden="true">🐾</div>
+
+  <div class="hero-photo-wrapper">
+    <!-- Reemplaza con la foto real de Hannah -->
+    <div class="hero-photo-placeholder" role="img" aria-label="Foto de Hannah">🐶</div>
+    <!-- <img src="./assets/hannah.jpg" alt="Hannah, nuestra perrita"> -->
+  </div>
+
+  <h1>Ayuda a Hannah</h1>
+  <p class="subtitle">
+    Mi perrita está en estado delicado y necesita un tratamiento urgente.
+    Tu donación, por pequeña que sea, puede salvarle la vida. 💛
+  </p>
+
+  <div class="hero-actions">
+    <a href="#donaciones" class="btn btn-primary">💛 Donar ahora</a>
+    <button class="btn btn-secondary" onclick="shareWhatsApp()">📲 Compartir</button>
+  </div>
+</header>
+
+<!-- ══ PROGRESS ══ -->
+<section id="progreso" aria-labelledby="progreso-title">
+  <div class="container">
+    <h2 class="section-title" id="progreso-title">📊 Nuestro progreso</h2>
+    <div class="section-divider"></div>
+    <p class="section-subtitle">Cada donación nos acerca a la meta de tratamiento de Hannah.</p>
+
+    <div class="progress-card">
+      <div class="progress-stats">
+        <div class="stat-item">
+          <div class="stat-value" id="stat-raised">$0</div>
+          <div class="stat-label">Recaudado</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-goal">$3.000.000</div>
+          <div class="stat-label">Meta</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-count">0</div>
+          <div class="stat-label">Donaciones</div>
+        </div>
+      </div>
+
+      <div class="progress-bar-wrapper" role="progressbar"
+           aria-label="Progreso de la campaña"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="progress-bar-fill" id="progress-fill" style="width:2%"></div>
+      </div>
+      <div class="progress-labels">
+        <span>$0</span>
+        <span id="progress-pct-text">0%</span>
+        <span>$3.000.000</span>
+      </div>
+      <p class="progress-pct" id="progress-pct">0% completado</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ HISTORIA ══ -->
+<section id="historia" style="background:#fff;" aria-labelledby="historia-title">
+  <div class="container">
+    <h2 class="section-title" id="historia-title">💛 La historia de Hannah</h2>
+    <div class="section-divider"></div>
+
+    <div class="story-grid">
+      <div class="story-image" aria-label="Foto de Hannah">
+        🐶
+        <!-- <img src="./assets/hannah-story.jpg" alt="Hannah antes de enfermar"> -->
+      </div>
+      <div class="story-text">
+        <p>
+          <strong>Hannah</strong> es mi compañera de vida. Desde que la adopté, ha llenado mi hogar
+          de alegría, amor incondicional y miles de momentos felices. Para mí, ella no es solo
+          una mascota: es familia.
+        </p>
+        <p>
+          Hace poco, Hannah comenzó a mostrar síntomas preocupantes. Después de varios exámenes,
+          el veterinario nos dio un diagnóstico que nos partió el corazón, pero también nos llenó
+          de esperanza: <strong>tiene tratamiento</strong>, y con la ayuda de todos podemos lograrlo.
+        </p>
+        <p>
+          El costo del tratamiento supera lo que puedo cubrir solo/a en este momento.
+          Por eso abro esta campaña: con total transparencia y con el único objetivo de
+          darle a Hannah la segunda oportunidad que se merece.
+        </p>
+
+        <!-- PLACEHOLDER: reemplaza el diagnóstico -->
+        <div class="diagnosis-badge">
+          🏥 Diagnóstico: <strong>[Nombre del diagnóstico veterinario]</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ DONAR ══ -->
+<section id="donaciones" aria-labelledby="donaciones-title">
+  <div class="container">
+    <h2 class="section-title" id="donaciones-title">💛 ¿Cómo donar?</h2>
+    <div class="section-divider"></div>
+    <p class="section-subtitle">Elige el monto que quieras y dona de forma segura. Todo ayuda.</p>
+
+    <div class="donate-section">
+      <!-- Montos predefinidos -->
+      <p style="font-weight:700;margin-bottom:1rem;">Selecciona un monto (COP):</p>
+      <div class="amount-grid" role="group" aria-label="Montos predefinidos">
+        <button class="amount-btn" onclick="selectAmount(5000, this)"  type="button">$5.000</button>
+        <button class="amount-btn" onclick="selectAmount(10000, this)" type="button">$10.000</button>
+        <button class="amount-btn" onclick="selectAmount(20000, this)" type="button">$20.000</button>
+        <button class="amount-btn" onclick="selectAmount(50000, this)" type="button">$50.000</button>
+        <button class="amount-btn" onclick="selectAmount(100000, this)" type="button">$100.000</button>
+        <button class="amount-btn" onclick="selectAmount(200000, this)" type="button">$200.000</button>
+      </div>
+
+      <!-- Monto libre -->
+      <div class="custom-amount-wrapper">
+        <input
+          type="number"
+          id="custom-amount"
+          placeholder="O ingresa otro monto (ej: 35000)"
+          min="1000"
+          step="1000"
+          oninput="onCustomAmountChange(this)"
+          aria-label="Monto personalizado en pesos colombianos"
+        >
+        <button class="btn btn-donate-fixed" onclick="donatePrimary()" type="button"
+                style="flex-shrink:0;width:auto;padding:0.85rem 1.5rem;">
+          💛 Donar con ePayco
+        </button>
+      </div>
+
+      <p style="font-size:0.82rem;color:var(--color-text-muted);margin-top:-0.5rem;margin-bottom:1.5rem;">
+        🔒 Pago seguro procesado por ePayco. Tarjeta de crédito/débito, PSE y más.
+      </p>
+
+      <hr style="border:none;border-top:1px solid var(--color-border);margin-bottom:1.5rem;">
+
+      <!-- Métodos alternativos manuales -->
+      <p style="font-weight:700;margin-bottom:1rem;">También puedes donar por:</p>
+      <div class="donate-methods">
+        <div class="method-card">
+          <div class="method-icon">📱</div>
+          <div class="method-name">Nequi</div>
+          <!-- PLACEHOLDER: reemplaza con tu número real -->
+          <div class="method-number">3XX-XXX-XXXX</div>
+          <div class="method-note">Envía tu comprobante por WhatsApp para confirmar</div>
+        </div>
+        <div class="method-card">
+          <div class="method-icon">💙</div>
+          <div class="method-name">Daviplata</div>
+          <!-- PLACEHOLDER: reemplaza con tu número real -->
+          <div class="method-number">3XX-XXX-XXXX</div>
+          <div class="method-note">Envía tu comprobante por WhatsApp para confirmar</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:1.5rem;">
+        <button class="btn btn-whatsapp" onclick="shareWhatsApp()" type="button">
+          📲 Compartir campaña por WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ ACTUALIZACIONES ══ -->
+<section id="actualizaciones" style="background:#fff;" aria-labelledby="actualizaciones-title">
+  <div class="container">
+    <h2 class="section-title" id="actualizaciones-title">📢 Actualizaciones</h2>
+    <div class="section-divider"></div>
+    <p class="section-subtitle">Mantente al día con el estado de Hannah y la campaña.</p>
+
+    <div class="timeline" id="updates-timeline" aria-live="polite">
+      <p style="color:var(--color-text-muted);">Cargando actualizaciones…</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ EVIDENCIAS ══ -->
+<section id="evidencias" aria-labelledby="evidencias-title">
+  <div class="container">
+    <h2 class="section-title" id="evidencias-title">📋 Evidencias</h2>
+    <div class="section-divider"></div>
+    <p class="section-subtitle">
+      Documentos y fotos que respaldan la campaña con total transparencia.
+    </p>
+
+    <div class="evidence-grid" id="evidence-grid" aria-live="polite">
+      <p style="color:var(--color-text-muted);">Cargando evidencias…</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FAQ ══ -->
+<section id="faq" style="background:#fff;" aria-labelledby="faq-title">
+  <div class="container">
+    <h2 class="section-title" id="faq-title">❓ Preguntas frecuentes</h2>
+    <div class="section-divider"></div>
+
+    <div class="faq-list" role="list">
+      <div class="faq-item" role="listitem">
+        <button class="faq-question" aria-expanded="false">
+          ¿Cómo sé que mi dinero llegará a Hannah?
+          <span class="faq-arrow" aria-hidden="true">▾</span>
+        </button>
+        <div class="faq-answer">
+          Publicamos todos los comprobantes de gastos veterinarios en la sección de Evidencias.
+          Además, las donaciones por ePayco quedan registradas en nuestro sistema de forma
+          transparente y puedes ver el total recaudado en tiempo real.
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-question" aria-expanded="false">
+          ¿Es seguro pagar con ePayco?
+          <span class="faq-arrow" aria-hidden="true">▾</span>
+        </button>
+        <div class="faq-answer">
+          Sí. ePayco es una pasarela de pago certificada, regulada en Colombia, con cifrado SSL
+          y cumplimiento PCI-DSS. Tus datos de tarjeta nunca pasan por nuestros servidores.
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-question" aria-expanded="false">
+          ¿Qué pasa si se recauda más de la meta?
+          <span class="faq-arrow" aria-hidden="true">▾</span>
+        </button>
+        <div class="faq-answer">
+          Cualquier excedente será usado para los cuidados continuos de Hannah
+          (alimentación especial, medicamentos de mantenimiento) y lo publicaremos aquí.
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-question" aria-expanded="false">
+          ¿Puedo donar desde fuera de Colombia?
+          <span class="faq-arrow" aria-hidden="true">▾</span>
+        </button>
+        <div class="faq-answer">
+          Sí. ePayco acepta tarjetas internacionales (Visa, Mastercard). Si tienes problemas,
+          contáctanos por WhatsApp.
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-question" aria-expanded="false">
+          ¿Cómo confirmo que mi donación por Nequi/Daviplata fue registrada?
+          <span class="faq-arrow" aria-hidden="true">▾</span>
+        </button>
+        <div class="faq-answer">
+          Envíanos el comprobante de transferencia por WhatsApp al número indicado.
+          Te confirmaremos el registro manualmente en un plazo máximo de 24 horas.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ TRANSPARENCIA ══ -->
+<section id="transparencia" aria-labelledby="transparencia-title">
+  <div class="container">
+    <h2 class="section-title" id="transparencia-title">🔍 Transparencia</h2>
+    <div class="section-divider"></div>
+    <p class="section-subtitle">
+      Nos comprometemos a una gestión honesta y abierta de cada peso recaudado.
+    </p>
+
+    <div class="transparency-grid">
+      <div class="transparency-card">
+        <div class="icon">📂</div>
+        <h3>Código abierto</h3>
+        <p>
+          Todo el código de esta campaña está en
+          <a href="https://github.com/luis2397/ayudahannah" target="_blank" rel="noopener">GitHub</a>,
+          incluyendo el registro de donaciones.
+        </p>
+      </div>
+      <div class="transparency-card">
+        <div class="icon">🧾</div>
+        <h3>Comprobantes públicos</h3>
+        <p>Publicamos facturas y recibos veterinarios en la sección de Evidencias.</p>
+      </div>
+      <div class="transparency-card">
+        <div class="icon">🔒</div>
+        <h3>Sin datos sensibles</h3>
+        <p>Solo guardamos: monto, fecha y estado de la transacción. Nunca datos de tarjeta.</p>
+      </div>
+      <div class="transparency-card">
+        <div class="icon">📊</div>
+        <h3>Progreso en tiempo real</h3>
+        <p>La barra de progreso se actualiza automáticamente con cada donación confirmada.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer role="contentinfo">
+  <div class="footer-paws" aria-hidden="true">🐾🐾🐾</div>
+  <p>
+    Hecho con ❤️ para Hannah &middot;
+    <a href="https://github.com/luis2397/ayudahannah" target="_blank" rel="noopener">Ver código fuente</a>
+    &middot; <a href="./admin.html">Admin</a>
+  </p>
+  <p style="margin-top:0.5rem;font-size:0.8rem;opacity:0.6;">
+    Los pagos son procesados de forma segura por ePayco.
+    Este sitio no almacena datos de tarjetas de crédito.
+  </p>
+</footer>
+
+<!-- ══ FLOATING DONATE BUTTON ══ -->
+<a href="#donaciones" class="btn btn-primary float-donate" aria-label="Ir a sección de donaciones">
+  💛 Donar
+</a>
+
+<script src="./js/main.js"></script>
+</body>
+</html>

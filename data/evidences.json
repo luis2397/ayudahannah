@@ -1,0 +1,28 @@
+{
+  "evidences": [
+    {
+      "id": 1,
+      "title": "Diagnóstico veterinario",
+      "description": "Documento oficial del diagnóstico emitido por la clínica veterinaria.",
+      "type": "pdf",
+      "url": "#",
+      "thumbnail": null
+    },
+    {
+      "id": 2,
+      "title": "Cotización del tratamiento",
+      "description": "Presupuesto detallado del tratamiento requerido.",
+      "type": "pdf",
+      "url": "#",
+      "thumbnail": null
+    },
+    {
+      "id": 3,
+      "title": "Foto de Hannah",
+      "description": "Hannah antes de enfermar, llena de vida y energía.",
+      "type": "image",
+      "url": "#",
+      "thumbnail": null
+    }
+  ]
+}

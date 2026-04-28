@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – Ayuda a Hannah</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="./css/styles.css">
+  <style>
+    body { background: #f5ece2; }
+    .admin-container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+    .admin-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .admin-card-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid #e8ddd0;
+      font-weight: 700;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .admin-card-body { padding: 1.5rem; overflow-x: auto; }
+    .auth-gate {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .auth-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 2.5rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .auth-box h2 { margin-bottom: 1.5rem; }
+    .auth-box input {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      border: 2px solid #e8ddd0;
+      border-radius: 10px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    .auth-box input:focus { outline: none; border-color: #e07b39; }
+    .btn-admin-login {
+      width: 100%;
+      background: #e07b39;
+      color: #fff;
+      border: none;
+      padding: 0.9rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-admin-login:hover { background: #c5622a; }
+    #auth-error { color: #e74c3c; font-size: 0.9rem; margin-top: 0.5rem; display: none; }
+    .btn-confirm { background: #27ae60; color: #fff; border: none; padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.83rem; font-weight: 600; }
+    .btn-confirm:hover { background: #219150; }
+    .btn-confirm:disabled { background: #aaa; cursor: not-allowed; }
+    .summary-row { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .summary-chip {
+      background: #fff8f2;
+      border: 1px solid #ffd0a0;
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      text-align: center;
+    }
+    .summary-chip .val { font-size: 1.5rem; font-weight: 800; color: #e07b39; }
+    .summary-chip .lbl { font-size: 0.8rem; color: #6b6b6b; }
+  </style>
+</head>
+<body>
+
+<!-- AUTH GATE -->
+<div class="auth-gate" id="auth-gate">
+  <div class="auth-box">
+    <div style="font-size:3rem;margin-bottom:1rem;">🐾</div>
+    <h2>Panel de Administración</h2>
+    <p style="color:#6b6b6b;margin-bottom:1.5rem;font-size:0.95rem;">
+      Acceso restringido. Ingresa el token de administrador.
+    </p>
+    <input type="password" id="token-input" placeholder="Token de administrador"
+           onkeydown="if(event.key==='Enter') checkAuth()">
+    <button class="btn-admin-login" onclick="checkAuth()">Entrar</button>
+    <p id="auth-error">Token incorrecto. Verifica e intenta de nuevo.</p>
+  </div>
+</div>
+
+<!-- MAIN ADMIN (hidden until authenticated) -->
+<div id="admin-main" style="display:none;">
+  <div class="admin-header">
+    <div class="admin-container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h1>🐾 Panel de Administración – Ayuda a Hannah</h1>
+        <p style="opacity:0.8;font-size:0.9rem;">Gestión de donaciones y transparencia</p>
+      </div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <a href="./index.html" class="btn btn-secondary" style="font-size:0.9rem;padding:0.6rem 1.2rem;">
+          ← Ver sitio público
+        </a>
+        <button onclick="logout()" class="btn btn-secondary" style="font-size:0.9rem;padding:0.6rem 1.2rem;">
+          Salir
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-container">
+    <!-- Summary -->
+    <div class="admin-card">
+      <div class="admin-card-header">📊 Resumen</div>
+      <div class="admin-card-body">
+        <div class="summary-row" id="summary-chips">
+          <div class="summary-chip">
+            <div class="val" id="adm-raised">–</div>
+            <div class="lbl">Recaudado</div>
+          </div>
+          <div class="summary-chip">
+            <div class="val" id="adm-count">–</div>
+            <div class="lbl">Donaciones</div>
+          </div>
+          <div class="summary-chip">
+            <div class="val" id="adm-pct">–</div>
+            <div class="lbl">% de la meta</div>
+          </div>
+          <div class="summary-chip">
+            <div class="val" id="adm-goal">–</div>
+            <div class="lbl">Meta</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Donations table -->
+    <div class="admin-card">
+      <div class="admin-card-header">
+        💳 Donaciones
+        <span id="donations-count-badge" style="background:#f0e8df;border-radius:50px;padding:0.2rem 0.6rem;font-size:0.8rem;margin-left:0.5rem;"></span>
+        <button onclick="loadData()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#e07b39;font-weight:700;font-size:0.9rem;">↻ Actualizar</button>
+      </div>
+      <div class="admin-card-body">
+        <p style="font-size:0.85rem;color:#6b6b6b;margin-bottom:1rem;">
+          Las donaciones por Nequi/Daviplata marcadas como "pendiente" pueden confirmarse manualmente
+          aquí una vez recibido el comprobante. Esta acción notificará al servidor.
+        </p>
+        <div id="donations-table-wrapper">
+          <p style="color:#6b6b6b;">Cargando…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="admin-card">
+      <div class="admin-card-header">📝 Cómo confirmar donaciones manuales (Nequi/Daviplata)</div>
+      <div class="admin-card-body" style="font-size:0.93rem;line-height:1.7;color:#444;">
+        <ol style="padding-left:1.25rem;">
+          <li>Recibe el comprobante del donante por WhatsApp o correo.</li>
+          <li>Verifica que el monto y número de cuenta coincidan.</li>
+          <li>Haz clic en "Confirmar" en la fila correspondiente (solo donaciones con estado "pendiente").</li>
+          <li>Si aún no existe el registro, usa el formulario de abajo para agregarlo.</li>
+        </ol>
+        <hr style="margin:1.5rem 0;border-color:#e8ddd0;">
+        <h3 style="margin-bottom:1rem;">➕ Registrar donación manual</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;">
+          <div>
+            <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.3rem;">Monto (COP)</label>
+            <input type="number" id="man-amount" placeholder="50000" style="width:100%;padding:0.7rem;border:2px solid #e8ddd0;border-radius:8px;font-size:1rem;">
+          </div>
+          <div>
+            <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.3rem;">Método</label>
+            <select id="man-method" style="width:100%;padding:0.7rem;border:2px solid #e8ddd0;border-radius:8px;font-size:1rem;background:#fff;">
+              <option value="nequi">Nequi</option>
+              <option value="daviplata">Daviplata</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.3rem;">Nota (opcional)</label>
+            <input type="text" id="man-note" placeholder="Referencia o comprobante" style="width:100%;padding:0.7rem;border:2px solid #e8ddd0;border-radius:8px;font-size:1rem;">
+          </div>
+        </div>
+        <button onclick="submitManual()" class="btn btn-donate-fixed" style="max-width:240px;margin-top:1rem;">
+          Registrar donación manual
+        </button>
+        <p id="man-result" style="margin-top:0.75rem;font-size:0.9rem;display:none;"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Auth (client-side token check – the real protection is server-side) ──
+const SESSION_KEY = 'hannah_admin_token';
+
+function checkAuth() {
+  const token = document.getElementById('token-input').value.trim();
+  if (!token) return;
+  // Store token in sessionStorage and show admin UI
+  // Real validation happens on API calls; this just gates the UI
+  sessionStorage.setItem(SESSION_KEY, token);
+  document.getElementById('auth-gate').style.display = 'none';
+  document.getElementById('admin-main').style.display = 'block';
+  loadData();
+}
+
+function logout() {
+  sessionStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+
+function getToken() { return sessionStorage.getItem(SESSION_KEY) || ''; }
+
+// Auto-check token in URL (?token=xxx)
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const urlToken = params.get('token');
+  if (urlToken) {
+    sessionStorage.setItem(SESSION_KEY, urlToken);
+    // Remove token from URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete('token');
+    window.history.replaceState({}, '', url.toString());
+  }
+  const stored = sessionStorage.getItem(SESSION_KEY);
+  if (stored) {
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('admin-main').style.display = 'block';
+    loadData();
+  }
+})();
+
+// ── Utilities ──
+function formatCOP(v) {
+  return new Intl.NumberFormat('es-CO', { style:'currency', currency:'COP', minimumFractionDigits:0 }).format(v);
+}
+function escapeHtml(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── Load data from JSON files ──
+async function loadData() {
+  await Promise.all([loadSummary(), loadDonations()]);
+}
+
+async function loadSummary() {
+  try {
+    const res = await fetch('./data/summary.json?_=' + Date.now());
+    const d = await res.json();
+    document.getElementById('adm-raised').textContent = formatCOP(d.raised || 0);
+    document.getElementById('adm-count').textContent = d.donations_count || 0;
+    document.getElementById('adm-pct').textContent = (d.percentage || 0) + '%';
+    document.getElementById('adm-goal').textContent = formatCOP(d.goal || 3000000);
+  } catch(e) { console.warn('summary error', e); }
+}
+
+async function loadDonations() {
+  const wrapper = document.getElementById('donations-table-wrapper');
+  try {
+    const res = await fetch('./data/donations.json?_=' + Date.now());
+    const d = await res.json();
+    const donations = d.donations || [];
+
+    document.getElementById('donations-count-badge').textContent = donations.length;
+
+    if (donations.length === 0) {
+      wrapper.innerHTML = '<p style="color:#6b6b6b;">No hay donaciones registradas todavía.</p>';
+      return;
+    }
+
+    const rows = [...donations].reverse().map(don => {
+      const badgeClass = don.status === 'approved' ? 'badge-approved'
+        : don.status === 'rejected' ? 'badge-rejected'
+        : don.status === 'manual' ? 'badge-manual'
+        : 'badge-pending';
+      const badgeLabel = don.status === 'approved' ? 'Aprobada'
+        : don.status === 'rejected' ? 'Rechazada'
+        : don.status === 'manual' ? 'Manual'
+        : 'Pendiente';
+      const canConfirm = don.status === 'pending';
+      return `<tr>
+        <td><code style="font-size:0.78rem;">${escapeHtml(don.transaction_id || '—')}</code></td>
+        <td>${escapeHtml(don.date ? new Date(don.date).toLocaleDateString('es-CO') : '—')}</td>
+        <td><strong>${formatCOP(don.amount || 0)}</strong></td>
+        <td>${escapeHtml(don.method || '—')}</td>
+        <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
+        <td>
+          <button class="btn-confirm" ${canConfirm ? '' : 'disabled'}
+            onclick="confirmManual('${escapeHtml(don.transaction_id || '')}', this)">
+            Confirmar
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    wrapper.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID Transacción</th>
+            <th>Fecha</th>
+            <th>Monto</th>
+            <th>Método</th>
+            <th>Estado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } catch(e) {
+    wrapper.innerHTML = '<p style="color:#e74c3c;">Error cargando donaciones: ' + escapeHtml(e.message) + '</p>';
+  }
+}
+
+// ── Confirm a pending donation manually ──
+async function confirmManual(transactionId, btn) {
+  if (!transactionId) return;
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const serverUrl = (window.WEBHOOK_SERVER_URL || '').replace(/\/$/, '');
+    if (!serverUrl) {
+      alert('WEBHOOK_SERVER_URL no configurado. Edita admin.html y agrega: window.WEBHOOK_SERVER_URL = "https://tu-servidor.com"');
+      btn.disabled = false; btn.textContent = 'Confirmar'; return;
+    }
+    const res = await fetch(serverUrl + '/admin/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken() },
+      body: JSON.stringify({ transaction_id: transactionId }),
+    });
+    const data = await res.json();
+    if (res.ok) { btn.textContent = '✓'; btn.style.background='#888'; await loadData(); }
+    else { alert('Error: ' + (data.error || res.status)); btn.disabled=false; btn.textContent='Confirmar'; }
+  } catch(e) { alert('Error de red: ' + e.message); btn.disabled=false; btn.textContent='Confirmar'; }
+}
+
+// ── Register a manual donation ──
+async function submitManual() {
+  const amount = parseInt(document.getElementById('man-amount').value, 10);
+  const method = document.getElementById('man-method').value;
+  const note   = document.getElementById('man-note').value.trim();
+  const result = document.getElementById('man-result');
+
+  if (!amount || amount < 1000) { alert('Ingresa un monto válido.'); return; }
+
+  const serverUrl = (window.WEBHOOK_SERVER_URL || '').replace(/\/$/, '');
+  if (!serverUrl) {
+    alert('WEBHOOK_SERVER_URL no configurado.');
+    return;
+  }
+
+  result.style.display = 'none';
+  try {
+    const res = await fetch(serverUrl + '/admin/manual-donation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken() },
+      body: JSON.stringify({ amount, method, note }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      result.textContent = '✅ Donación registrada correctamente.';
+      result.style.color = '#27ae60';
+      result.style.display = 'block';
+      document.getElementById('man-amount').value = '';
+      document.getElementById('man-note').value = '';
+      await loadData();
+    } else {
+      result.textContent = '❌ Error: ' + (data.error || res.status);
+      result.style.color = '#e74c3c';
+      result.style.display = 'block';
+    }
+  } catch(e) {
+    result.textContent = '❌ Error de red: ' + e.message;
+    result.style.color = '#e74c3c';
+    result.style.display = 'block';
+  }
+}
+</script>
+
+<!-- Configure server URL here -->
+<script>
+  window.WEBHOOK_SERVER_URL = 'https://tu-servidor.com'; // reemplaza
+</script>
+</body>
+</html>
